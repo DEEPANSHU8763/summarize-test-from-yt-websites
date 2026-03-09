@@ -2,46 +2,34 @@ import streamlit as st
 import validators
 import ssl
 import certifi
-import re
 
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
 from langchain_community.document_loaders import UnstructuredURLLoader
 
 
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
 
 
-# -----------------------------
+# ------------------------
 # Streamlit UI
-# -----------------------------
+# ------------------------
 
-st.set_page_config(
-    page_title="Summarize Website",
-    page_icon="🦜"
-)
+st.set_page_config(page_title="AI Website Summarizer", page_icon="🦜")
 
 st.title("🦜 AI Website Summarizer")
-st.write("Paste any article URL and get a summary.")
 
-
-# -----------------------------
-# Sidebar
-# -----------------------------
 
 with st.sidebar:
     groq_api_key = st.text_input("Enter GROQ API Key", type="password")
 
 
-# URL input
-url = st.text_input("Enter website URL")
+url = st.text_input("Enter Website URL")
 
 
-# -----------------------------
+# ------------------------
 # LLM
-# -----------------------------
+# ------------------------
 
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
@@ -50,10 +38,6 @@ llm = ChatGroq(
     max_tokens=600
 )
 
-
-# -----------------------------
-# Prompt
-# -----------------------------
 
 prompt = PromptTemplate.from_template(
 """
@@ -64,53 +48,69 @@ Summarize the following content in about 300 words.
 )
 
 
-# -----------------------------
-# Summarization function
-# -----------------------------
+# ------------------------
+# Simple Text Splitter
+# ------------------------
 
-def summarize_large_text(docs):
+def split_text(text, chunk_size=2000, overlap=200):
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2000,
-        chunk_overlap=200
-    )
+    chunks = []
+    start = 0
 
-    split_docs = splitter.split_documents(docs)
+    while start < len(text):
+
+        end = start + chunk_size
+        chunks.append(text[start:end])
+
+        start += chunk_size - overlap
+
+    return chunks
+
+
+# ------------------------
+# Summarization Pipeline
+# ------------------------
+
+def summarize_docs(docs):
+
+    full_text = "\n".join([doc.page_content for doc in docs])
+
+    chunks = split_text(full_text)
 
     summaries = []
 
-    for doc in split_docs:
+    for chunk in chunks:
 
-        formatted_prompt = prompt.format(text=doc.page_content)
+        formatted = prompt.format(text=chunk)
 
-        response = llm.invoke(formatted_prompt)
+        response = llm.invoke(formatted)
 
         summaries.append(response.content)
 
-    combined_text = "\n".join(summaries)
+    combined = "\n".join(summaries)
 
     final_prompt = f"""
-Combine the following partial summaries into one final summary of about 300 words.
+Combine the following summaries into one final summary of about 300 words.
 
-{combined_text}
+{combined}
 """
 
-    final_summary = llm.invoke(final_prompt)
+    final = llm.invoke(final_prompt)
 
-    return final_summary.content
+    return final.content
 
 
-# -----------------------------
-# Button
-# -----------------------------
+# ------------------------
+# Run Button
+# ------------------------
 
 if st.button("Summarize"):
 
     if not groq_api_key:
-        st.error("Please enter GROQ API key")
+        st.error("Enter GROQ API key")
 
     elif not validators.url(url):
-        st.error("Please enter a valid URL")
+        st.error("Enter valid URL")
 
     else:
 
@@ -125,7 +125,7 @@ if st.button("Summarize"):
 
                 docs = loader.load()
 
-                summary = summarize_large_text(docs)
+                summary = summarize_docs(docs)
 
                 st.success(summary)
 
