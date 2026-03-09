@@ -1,7 +1,7 @@
-streamlit
+streamlit==1.37.1
 langchain==0.2.16
 langchain-community==0.2.16
 langchain-groq==0.1.6
 youtube-transcript-api==0.6.2
-validators
-unstructured
+validators==0.33.0
+unstructured==0.15.7
