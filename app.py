@@ -4,7 +4,7 @@ import ssl
 import certifi
 import re
 
-from langchain_core.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain_groq import ChatGroq
 from langchain.chains.summarize import load_summarize_chain
 from langchain_community.document_loaders import UnstructuredURLLoader
@@ -171,3 +171,4 @@ if st.button("Summarize the Content from YT or Website"):
         except Exception as e:
 
             st.exception(e)
+
